@@ -2,23 +2,13 @@
 #include "def.h"
 
 extern char etext[]; 
-// 创建页表
+
 pagetable_t create_pagetable(void) {
     pagetable_t pt = (pagetable_t)alloc_page();
     if (!pt) return NULL;
-    memset(pt, 0, PGSIZE);  //清零
+    memset(pt, 0, PGSIZE);
     return pt;
 }
-
-// 应用层: kvminit() - 内核虚拟内存初始化
-//         ↓
-// 映射层: map_region() - 区域映射
-//         ↓  
-// 页表层: map_page() - 页面级映射
-//         ↓
-// 遍历层: walk_create() / walk_lookup() - 页表遍历
-//         ↓
-// 物理层: alloc_page() / free_page() - 物理内存分配
 
 int map_page(pagetable_t pt, unsigned long va, unsigned long pa, unsigned long size, int perm) {
     if((va % PGSIZE) != 0)
@@ -41,25 +31,24 @@ int map_page(pagetable_t pt, unsigned long va, unsigned long pa, unsigned long s
             // 页表项已存在
             panic("mappages: remap");
 
-        // 更新页表项，建立映射：物理地址 + 权限 + 有效位
+        // 更新页表项
         *pte = PA2PTE(pa) | perm | PTE_V;
         
         if(a == last)
             break;
-        a += PGSIZE; // 下一个虚拟页
-        pa += PGSIZE;// 下一个物理页
+        a += PGSIZE;
+        pa += PGSIZE;
     }
     return 0;
 }
 
-//页表销毁
 void destroy_pagetable(pagetable_t pt) {
     for (int i = 0; i < 512; i++) {
         pte_t pte = pt[i];
         if ((pte & PTE_V) && !(pte & (PTE_R | PTE_W | PTE_X))) {
             // 中间级页表
             pagetable_t child = (pagetable_t)PTE2PA(pte);
-            destroy_pagetable(child);    // 递归销毁子页表
+            destroy_pagetable(child);
         }
     }
     free_page(pt);
@@ -80,11 +69,11 @@ pte_t* walk_create(pagetable_t pt, unsigned long va) {
             // 分配失败
             if (!pt) 
                 return NULL;  
-            memset(pt, 0, PGSIZE);      // 清零新页表
+            memset(pt, 0, PGSIZE);
             *pte = PA2PTE((unsigned long)pt) | PTE_V;
         }
     }
-    return &pt[PX(0, va)];       // 返回叶子级页表项
+    return &pt[PX(0, va)];
 }
 
 // 不创建中间级页表
@@ -102,8 +91,8 @@ pte_t* walk_lookup(pagetable_t pt, unsigned long va) {
 
 pagetable_t kernel_pagetable;
 
-void kvminit(void) {
-    kernel_pagetable = create_pagetable();  //创建根列表
+void kvm_init(void) {
+    kernel_pagetable = create_pagetable();
 
     // 映射内核代码段
     map_region(kernel_pagetable, KERNBASE, KERNBASE, 
@@ -119,7 +108,7 @@ void kvminit(void) {
  } 
  
 
-void kvminithart(void) { 
+void kvm_inithart(void) { 
     // 激活内核页表
     w_satp(MAKE_SATP(kernel_pagetable)); 
     sfence_vma(); 

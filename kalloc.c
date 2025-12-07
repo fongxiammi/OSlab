@@ -10,18 +10,16 @@ extern char end[];
 struct run {
 	struct run *next;
 };
-// 主分配器：单向有序链表
+
 struct {
 	struct spinlock lock;
-	struct run *freelist;  // 空闲页链表头
+	struct run *freelist;
 } pmm;
 
-
-// 页面池：高速缓存
 struct {
     struct spinlock lock;
-    void *buf[PAGE_POOL_CAP];// 缓存数组
-    int n;  // 当前缓存数量
+    void *buf[PAGE_POOL_CAP];
+    int n;
 } page_cache;
 
 void pmm_init(void) {
@@ -66,9 +64,7 @@ void *alloc_page(void) {
 
 void free_page(void *page) {
     // 检查地址合法性
-	if (((unsigned long)page % PGSIZE) != 0 || 
-    (char *)page < end || 
-    (unsigned long)page >= PHYSTOP)
+	if (((unsigned long)page % PGSIZE) != 0 || (char *)page < end || (unsigned long)page >= PHYSTOP)
 		panic("free_page: invalid page");
 
     // 填充垃圾数据 
@@ -98,7 +94,6 @@ void free_page_to_freelist(void *page) {
         pmm.freelist = r;
     } 
     else {
-        //按地址有序插入
         struct run *prev = pmm.freelist;
         while (prev->next && (char*)prev->next < (char*)r) {
             prev = prev->next;
@@ -109,7 +104,6 @@ void free_page_to_freelist(void *page) {
     release(&pmm.lock);
 }
 
-// 连续内存分配
 void *alloc_pages(int n) {
     if (n <= 0) 
         return NULL;

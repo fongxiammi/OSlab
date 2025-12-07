@@ -349,10 +349,10 @@ void main() {
     // test_virtual_memory();
 
     // Lab4
-    // pt_init();
-    // trap_init();  // 中断系统初始化
-    // test_timer_interrupt();
-    // test_exception_handling();
+    pt_init();
+    trap_init();  // 中断系统初始化
+    test_timer_interrupt();
+    test_exception_handling();
 
     // Lab5
     // pt_init();
